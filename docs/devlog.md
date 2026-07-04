@@ -152,3 +152,42 @@
 ### 提交信息
 - 提交说明: `feat: add celery task with mock processing and status polling`
 - 分支: dev
+
+---
+
+## 阶段3：结果下载与错误处理
+
+### 日期
+2026-07-04
+
+### 阶段目标
+实现结果文件下载接口，前端展示下载按钮和失败错误信息。
+
+### 关键代码修改（文件列表）
+
+#### 后端 (backend/)
+- `main.py` - 新增 GET /api/tasks/{task_id}/download 下载端点，支持文件流返回
+  - 任务不存在返回 404
+  - 任务未完成返回 400
+  - output_file_path 为空返回 404
+  - 文件不存在返回 404
+  - 正常返回 FileResponse（application/zip）
+- `tests/test_download.py` - 新建，5 个下载接口单元测试
+
+#### 前端 (frontend/)
+- 前端下载按钮、失败展示、模拟失败复选框已在阶段2实现，本阶段无需修改
+
+#### 文档
+- `docs/test_report_stage3.md` - 阶段3测试报告
+
+### 遇到的问题及解决方案
+
+无新问题，阶段2已提前实现了前端的下载按钮和错误展示逻辑。
+
+### 测试结果
+- 15 个单元测试全部通过（15 passed）
+- 前端 TypeScript 类型检查通过
+
+### 提交信息
+- 提交说明: `feat: add download endpoint and error display`
+- 分支: dev

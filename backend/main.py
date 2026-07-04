@@ -1,6 +1,6 @@
 """FastAPI 应用入口模块。
 
-提供健康检查、任务创建、任务状态查询等 API 端点，
+提供健康检查、任务创建、任务状态查询、结果下载等 API 端点，
 以及应用启动时的数据库初始化。
 """
 
@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, BASE_DIR
@@ -164,3 +165,60 @@ def get_task_status(
         raise HTTPException(status_code=404, detail="Task not found")
 
     return TaskStatusResponse.model_validate(task)
+
+
+@app.get(
+    "/api/tasks/{task_id}/download",
+    tags=["任务"],
+)
+def download_task_result(
+    task_id: str,
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    """下载任务结果文件端点。
+
+    读取任务记录的 output_file_path，以文件流返回。
+    仅当任务状态为 completed 且文件存在时可下载。
+
+    Args:
+        task_id: 任务 ID。
+        db: 数据库会话。
+
+    Returns:
+        FileResponse: 结果文件流。
+
+    Raises:
+        HTTPException: 当任务不存在（404）、任务未完成（400）、
+                       或文件不存在（404）时抛出。
+    """
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # 检查任务是否已完成
+    if task.status != "completed":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Task is not completed. Current status: {task.status}",
+        )
+
+    # 检查输出文件路径是否存在
+    if not task.output_file_path:
+        raise HTTPException(
+            status_code=404,
+            detail="Output file path is not set",
+        )
+
+    # 检查文件是否存在
+    file_path = Path(task.output_file_path)
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Result file not found on disk",
+        )
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/zip",
+        filename=f"{task_id}_result.zip",
+    )
