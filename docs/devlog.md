@@ -53,4 +53,5 @@
 
 ### 提交信息
 - 提交说明: `feat: init project skeleton with health check`
-- 备注: 待提交
+- 提交 Hash: `3975e83`
+- 分支: dev
