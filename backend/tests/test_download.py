@@ -57,6 +57,9 @@ def test_client(tmp_path, monkeypatch):
     test_upload_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr("main.UPLOAD_DIR", test_upload_dir)
 
+    # 测试时使用 Celery 模式（配合 mock 使用）
+    monkeypatch.setattr("main.USE_THREAD_MODE", False)
+
     test_results_dir = tmp_path / "results"
     test_results_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr("tasks.RESULTS_DIR", test_results_dir)
