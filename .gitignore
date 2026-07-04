@@ -1,2 +1,40 @@
-# Google App Engine generated folder
-appengine-generated/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.venv/
+env/
+venv/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Media files (uploads and results)
+media/uploads/*
+media/results/*
+!media/uploads/.gitkeep
+!media/results/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node modules (frontend has its own, but just in case)
+node_modules/

@@ -1,0 +1,15 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "AI World Technical Service Website Backend"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "celery>=5.4.0",
+  "redis>=5.0.0",
+  "sqlalchemy>=2.0.0",
+  "aiofiles>=24.0.0",
+  "python-multipart>=0.0.12",
+  "pydantic>=2.9.0",
+]
