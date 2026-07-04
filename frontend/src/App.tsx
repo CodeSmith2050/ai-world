@@ -1,11 +1,17 @@
 /**
  * 应用主组件
  *
- * 提供健康检查和任务提交功能。
+ * 提供健康检查、任务提交、任务进度跟踪功能。
  */
 
-import { useState, useRef } from 'react'
-import { checkHealth, createTask } from './api'
+import { useState, useRef, useEffect } from 'react'
+import {
+  checkHealth,
+  createTask,
+  getTaskStatus,
+  getDownloadUrl,
+  type TaskStatusResponse,
+} from './api'
 import './App.css'
 
 /** 健康检查结果状态 */
@@ -13,6 +19,9 @@ type HealthStatus = 'idle' | 'loading' | 'success' | 'error'
 
 /** 任务提交状态 */
 type TaskStatus = 'idle' | 'submitting' | 'success' | 'error'
+
+/** 轮询间隔（毫秒） */
+const POLL_INTERVAL = 2000
 
 function App() {
   // 健康检查相关状态
@@ -24,10 +33,63 @@ function App() {
   const [taskId, setTaskId] = useState<string>('')
   const [taskError, setTaskError] = useState<string>('')
 
+  // 任务进度跟踪状态
+  const [taskProgress, setTaskProgress] = useState<TaskStatusResponse | null>(null)
+
   // 表单数据
   const [inputText, setInputText] = useState<string>('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [simulateFailure, setSimulateFailure] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 轮询定时器引用
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /**
+   * 停止轮询
+   */
+  const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
+
+  /**
+   * 开始轮询任务状态
+   *
+   * 每 2 秒查询一次任务状态，直到任务完成或失败。
+   *
+   * @param id - 任务 ID
+   */
+  const startPolling = (id: string) => {
+    const poll = async () => {
+      try {
+        const status = await getTaskStatus(id)
+        setTaskProgress(status)
+
+        // 任务完成或失败时停止轮询
+        if (status.status === 'completed' || status.status === 'failed') {
+          stopPolling()
+          return
+        }
+      } catch (err) {
+        // 请求失败时停止轮询
+        stopPolling()
+        return
+      }
+
+      // 继续下一轮轮询
+      pollTimerRef.current = setTimeout(poll, POLL_INTERVAL)
+    }
+
+    poll()
+  }
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => stopPolling()
+  }, [])
 
   /**
    * 处理健康检查按钮点击事件
@@ -67,10 +129,13 @@ function App() {
 
     setTaskStatus('submitting')
     setTaskError('')
+    setTaskProgress(null)
     try {
-      const result = await createTask(selectedFile, inputText)
+      const result = await createTask(selectedFile, inputText, simulateFailure)
       setTaskStatus('success')
       setTaskId(result.task_id)
+      // 开始轮询任务状态
+      startPolling(result.task_id)
     } catch (err) {
       setTaskStatus('error')
       setTaskError(err instanceof Error ? err.message : 'Unknown error')
@@ -81,14 +146,37 @@ function App() {
    * 重置表单
    */
   const handleReset = () => {
+    stopPolling()
     setTaskStatus('idle')
     setTaskId('')
     setTaskError('')
+    setTaskProgress(null)
     setInputText('')
     setSelectedFile(null)
+    setSimulateFailure(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  /**
+   * 处理下载结果
+   */
+  const handleDownload = () => {
+    if (taskId) {
+      window.open(getDownloadUrl(taskId), '_blank')
+    }
+  }
+
+  /** 获取状态文案 */
+  const getStatusText = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      queued: '排队中',
+      processing: '处理中',
+      completed: '已完成',
+      failed: '失败',
+    }
+    return statusMap[status] || status
   }
 
   return (
@@ -156,6 +244,17 @@ function App() {
           />
         </div>
 
+        <div className="form-group checkbox-group">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={simulateFailure}
+              onChange={(e) => setSimulateFailure(e.target.checked)}
+            />
+            模拟失败（测试用）
+          </label>
+        </div>
+
         <div className="button-group">
           <button
             type="button"
@@ -176,19 +275,67 @@ function App() {
           )}
         </div>
 
-        {taskStatus === 'success' && (
-          <div className="status-message success">
-            ✅ 任务创建成功！<br />
-            Task ID: <strong>{taskId}</strong>
-          </div>
-        )}
-
         {taskStatus === 'error' && (
           <div className="status-message error">
             ❌ {taskError}
           </div>
         )}
       </div>
+
+      {/* 任务进度区域 */}
+      {taskProgress && (
+        <div className="progress-section">
+          <h2>任务进度</h2>
+
+          <div className="progress-info">
+            <div className="progress-row">
+              <span className="progress-label">Task ID:</span>
+              <span className="progress-value">{taskProgress.task_id}</span>
+            </div>
+            <div className="progress-row">
+              <span className="progress-label">状态:</span>
+              <span className={`progress-value status-badge ${taskProgress.status}`}>
+                {getStatusText(taskProgress.status)}
+              </span>
+            </div>
+            {taskProgress.current_step && (
+              <div className="progress-row">
+                <span className="progress-label">当前步骤:</span>
+                <span className="progress-value">{taskProgress.current_step}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 进度条 */}
+          <div className="progress-bar-container">
+            <div
+              className="progress-bar-fill"
+              style={{ width: `${taskProgress.progress}%` }}
+            />
+            <span className="progress-bar-text">{taskProgress.progress}%</span>
+          </div>
+
+          {/* 下载按钮 */}
+          {taskProgress.status === 'completed' && (
+            <div className="download-section">
+              <button
+                type="button"
+                className="download-button"
+                onClick={handleDownload}
+              >
+                📥 下载结果
+              </button>
+            </div>
+          )}
+
+          {/* 错误信息 */}
+          {taskProgress.status === 'failed' && taskProgress.error_message && (
+            <div className="status-message error">
+              ❌ 错误: {taskProgress.error_message}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

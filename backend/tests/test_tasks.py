@@ -1,11 +1,12 @@
 """任务创建接口的单元测试。
 
 使用 TestClient 模拟 HTTP 请求，验证任务创建流程的正确性。
+Celery 任务使用 mock 避免连接 Redis。
 """
 
 import io
-import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -78,7 +79,8 @@ class TestHealthCheck:
 class TestCreateTask:
     """任务创建接口测试。"""
 
-    def test_create_task_success(self, test_client, tmp_path):
+    @patch("main.process_task")
+    def test_create_task_success(self, mock_process_task, test_client, tmp_path):
         """测试正常创建任务。
 
         验证：
@@ -109,7 +111,11 @@ class TestCreateTask:
         assert len(saved_files) == 1
         assert saved_files[0].read_bytes() == image_content
 
-    def test_create_task_invalid_extension(self, test_client):
+        # 验证 Celery 任务被调用
+        mock_process_task.delay.assert_called_once()
+
+    @patch("main.process_task")
+    def test_create_task_invalid_extension(self, mock_process_task, test_client):
         """测试上传不支持的文件扩展名。
 
         验证：返回状态码 400
@@ -124,8 +130,10 @@ class TestCreateTask:
 
         assert response.status_code == 400
         assert "not allowed" in response.json()["detail"]
+        mock_process_task.delay.assert_not_called()
 
-    def test_create_task_missing_text(self, test_client):
+    @patch("main.process_task")
+    def test_create_task_missing_text(self, mock_process_task, test_client):
         """测试缺少文本字段。
 
         验证：返回状态码 422（字段校验失败）
@@ -139,7 +147,8 @@ class TestCreateTask:
 
         assert response.status_code == 422
 
-    def test_create_task_missing_image(self, test_client):
+    @patch("main.process_task")
+    def test_create_task_missing_image(self, mock_process_task, test_client):
         """测试缺少图片字段。
 
         验证：返回状态码 422（字段校验失败）
@@ -151,7 +160,8 @@ class TestCreateTask:
 
         assert response.status_code == 422
 
-    def test_create_task_database_record(self, test_client):
+    @patch("main.process_task")
+    def test_create_task_database_record(self, mock_process_task, test_client):
         """测试创建任务后数据库记录正确。
 
         验证数据库中存在对应记录，字段值正确。
@@ -166,10 +176,8 @@ class TestCreateTask:
 
         task_id = response.json()["task_id"]
 
-        # 通过 API 获取数据库连接验证记录
-        # 这里直接查询数据库
+        # 通过覆盖后的数据库会话验证记录
         from database import get_db
-        # 获取覆盖后的数据库会话
         db_gen = app.dependency_overrides[get_db]()
         db = next(db_gen)
 
@@ -179,7 +187,8 @@ class TestCreateTask:
         assert task.status == "queued"
         assert task.progress == 0
         assert task.input_text == "数据库验证测试"
-        assert task.input_image_path.endswith("test.jpg"[:0] + task_id + ".jpg")
+        assert task_id in task.input_image_path
+        assert task.input_image_path.endswith(".jpg")
         assert task.output_file_path is None
         assert task.error_message is None
 

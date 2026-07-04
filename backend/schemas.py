@@ -34,7 +34,7 @@ class TaskStatusResponse(BaseModel):
         updated_at: 任务更新时间。
     """
 
-    task_id: str
+    task_id: str = Field(alias="id")
     status: str
     progress: int
     current_step: Optional[str] = None
@@ -43,7 +43,7 @@ class TaskStatusResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class HealthResponse(BaseModel):

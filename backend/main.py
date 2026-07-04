@@ -1,9 +1,9 @@
 """FastAPI 应用入口模块。
 
-提供健康检查、任务创建等 API 端点，以及应用启动时的数据库初始化。
+提供健康检查、任务创建、任务状态查询等 API 端点，
+以及应用启动时的数据库初始化。
 """
 
-import os
 import shutil
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 from database import Base, engine, get_db, BASE_DIR
 from models import Task
-from schemas import HealthResponse, TaskCreateResponse
+from schemas import HealthResponse, TaskCreateResponse, TaskStatusResponse
+from tasks import process_task
 
 # 上传文件存储目录
 UPLOAD_DIR = BASE_DIR / "media" / "uploads"
@@ -77,16 +78,18 @@ def health_check() -> HealthResponse:
 async def create_task(
     image: UploadFile = File(..., description="上传的图片文件"),
     text: str = Form(..., description="输入文本描述"),
+    simulate_failure: str = Form("false", description="是否模拟失败"),
     db: Session = Depends(get_db),
 ) -> TaskCreateResponse:
     """创建任务端点。
 
     接收图片和文本，保存图片到 media/uploads/，写入数据库，
-    返回任务 ID 和初始状态。
+    触发 Celery 异步任务处理，返回任务 ID 和初始状态。
 
     Args:
         image: 上传的图片文件。
         text: 输入的文本描述。
+        simulate_failure: 是否模拟失败（"true" 时触发失败）。
         db: 数据库会话。
 
     Returns:
@@ -126,4 +129,38 @@ async def create_task(
     db.commit()
     db.refresh(task)
 
+    # 触发 Celery 异步任务
+    should_simulate_failure = simulate_failure.lower() == "true"
+    process_task.delay(task.id, should_simulate_failure)
+
     return TaskCreateResponse(task_id=task.id, status=task.status)
+
+
+@app.get(
+    "/api/tasks/{task_id}",
+    response_model=TaskStatusResponse,
+    tags=["任务"],
+)
+def get_task_status(
+    task_id: str,
+    db: Session = Depends(get_db),
+) -> TaskStatusResponse:
+    """查询任务状态端点。
+
+    根据任务 ID 返回当前状态、进度等信息。
+
+    Args:
+        task_id: 任务 ID。
+        db: 数据库会话。
+
+    Returns:
+        TaskStatusResponse: 任务状态信息。
+
+    Raises:
+        HTTPException: 当任务不存在时返回 404。
+    """
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return TaskStatusResponse.model_validate(task)

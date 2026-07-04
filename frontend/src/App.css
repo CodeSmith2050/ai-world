@@ -1,7 +1,7 @@
 /**
  * 应用主样式
  *
- * 包含页面布局、健康检查区域、任务表单等样式定义。
+ * 包含页面布局、健康检查区域、任务表单、进度条等样式定义。
  */
 
 .app-container {
@@ -25,7 +25,8 @@
 
 /* 通用区块样式 */
 .health-section,
-.task-section {
+.task-section,
+.progress-section {
   background: var(--social-bg);
   border-radius: 12px;
   padding: 32px;
@@ -35,7 +36,8 @@
 }
 
 .health-section h2,
-.task-section h2 {
+.task-section h2,
+.progress-section h2 {
   font-size: 1.5rem;
   margin-bottom: 24px;
   color: var(--text-h);
@@ -44,7 +46,8 @@
 
 /* 按钮样式 */
 .health-button,
-.submit-button {
+.submit-button,
+.download-button {
   font-size: 16px;
   padding: 12px 32px;
   border-radius: 8px;
@@ -57,7 +60,8 @@
 }
 
 .health-button:hover:not(:disabled),
-.submit-button:hover:not(:disabled) {
+.submit-button:hover:not(:disabled),
+.download-button:hover {
   opacity: 0.9;
 }
 
@@ -138,6 +142,111 @@
 .text-input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+/* 复选框 */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  cursor: pointer;
+}
+
+/* 进度区域 */
+.progress-info {
+  margin-bottom: 24px;
+}
+
+.progress-row {
+  display: flex;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.progress-label {
+  min-width: 100px;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.progress-value {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+/* 状态徽章 */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.status-badge.queued {
+  background-color: rgba(156, 163, 175, 0.2);
+  color: #6b7280;
+}
+
+.status-badge.processing {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.status-badge.completed {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.status-badge.failed {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* 进度条 */
+.progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  background: var(--bg);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, #3b82f6 100%);
+  transition: width 0.5s ease;
+  border-radius: 16px;
+}
+
+.progress-bar-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+/* 下载区域 */
+.download-section {
+  text-align: center;
+  margin-top: 24px;
 }
 
 /* 状态消息 */

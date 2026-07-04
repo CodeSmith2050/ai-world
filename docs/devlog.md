@@ -100,3 +100,55 @@
 ### 提交信息
 - 提交说明: `feat: add task creation endpoint with file upload and database`
 - 分支: dev
+
+---
+
+## 阶段2：异步任务与 Celery 集成
+
+### 日期
+2026-07-04
+
+### 阶段目标
+任务创建后自动触发 Celery 异步任务处理，更新任务状态，前端实时展示进度。
+
+### 关键代码修改（文件列表）
+
+#### 后端 (backend/)
+- `celery_app.py` - 新建，Celery 应用配置，支持 Redis broker 和测试内存 broker
+- `tasks.py` - 新建，process_task 异步任务实现（解析需求→生成3D模型→仿真计算→完成）
+- `main.py` - 添加 simulate_failure 参数，创建任务后调用 process_task.delay()，新增 GET /api/tasks/{task_id} 状态查询接口
+- `schemas.py` - 修复 TaskStatusResponse 字段映射（使用 alias="id" 映射 task_id）
+- `tests/test_celery.py` - 新建，4 个 Celery 任务单元测试
+- `tests/test_tasks.py` - 更新，使用 mock 隔离 Celery 依赖
+
+#### 前端 (frontend/)
+- `src/api.ts` - 新增 getTaskStatus、getDownloadUrl 接口和 TaskStatusResponse 类型
+- `src/App.tsx` - 新增任务进度轮询逻辑（2秒间隔）、进度条展示、下载按钮、错误展示
+- `src/App.css` - 新增进度条、状态徽章、下载按钮等样式
+
+#### 文档
+- `docs/test_report_stage2.md` - 阶段2测试报告
+
+### 遇到的问题及解决方案
+
+**问题1：Celery eager 模式仍连接 Redis**
+- 现象：设置了 task_always_eager=True 但 Celery backend 仍尝试连接 Redis
+- 原因：Celery 配置的 backend 仍指向 Redis
+- 解决方案：在 celery_app.py 中添加 IS_TESTING 环境变量判断，测试时使用 memory broker 和 cache backend
+
+**问题2：TaskStatusResponse 字段映射错误**
+- 现象：`Field required [type=missing]` for task_id
+- 原因：SQLAlchemy 模型字段名为 `id`，但 Pydantic schema 中为 `task_id`
+- 解决方案：使用 `Field(alias="id")` 和 `populate_by_name=True` 配置
+
+**问题3：测试中 Celery 任务连接 Redis 超时**
+- 现象：test_tasks.py 中的测试因 Celery.delay() 连接 Redis 失败
+- 解决方案：使用 `@patch("main.process_task")` mock 掉 Celery 任务调用
+
+### 测试结果
+- 10 个单元测试全部通过（10 passed）
+- 前端 TypeScript 类型检查通过
+
+### 提交信息
+- 提交说明: `feat: add celery task with mock processing and status polling`
+- 分支: dev
