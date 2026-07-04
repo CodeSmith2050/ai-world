@@ -4,7 +4,9 @@
 以及应用启动时的数据库初始化。
 """
 
+import os
 import shutil
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,6 +18,25 @@ from database import Base, engine, get_db, BASE_DIR
 from models import Task
 from schemas import HealthResponse, TaskCreateResponse, TaskStatusResponse
 from tasks import process_task
+
+# 是否使用后台线程模式（Redis 不可用时的降级方案）
+USE_THREAD_MODE = os.getenv("USE_THREAD_MODE", "true").lower() == "true"
+
+
+def _run_task_in_thread(task_id: str, simulate_failure: bool) -> None:
+    """在后台线程中执行任务处理。
+
+    当 Redis/Celery 不可用时，使用线程模式模拟异步任务。
+
+    Args:
+        task_id: 任务 ID。
+        simulate_failure: 是否模拟失败。
+    """
+    try:
+        process_task.run(task_id, simulate_failure=simulate_failure)
+    except Exception:
+        # process_task 内部已处理异常并更新数据库，此处无需额外处理
+        pass
 
 # 上传文件存储目录
 UPLOAD_DIR = BASE_DIR / "media" / "uploads"
@@ -130,9 +151,19 @@ async def create_task(
     db.commit()
     db.refresh(task)
 
-    # 触发 Celery 异步任务
+    # 触发异步任务
     should_simulate_failure = simulate_failure.lower() == "true"
-    process_task.delay(task.id, should_simulate_failure)
+    if USE_THREAD_MODE:
+        # 线程模式：后台线程执行，无需 Redis
+        thread = threading.Thread(
+            target=_run_task_in_thread,
+            args=(task.id, should_simulate_failure),
+            daemon=True,
+        )
+        thread.start()
+    else:
+        # Celery 模式：需要 Redis 和 Celery Worker
+        process_task.delay(task.id, should_simulate_failure)
 
     return TaskCreateResponse(task_id=task.id, status=task.status)
 
