@@ -99,6 +99,7 @@
 
 ### 提交信息
 - 提交说明: `feat: add task creation endpoint with file upload and database`
+- 提交 Hash: `3051137`
 - 分支: dev
 
 ---
@@ -151,6 +152,7 @@
 
 ### 提交信息
 - 提交说明: `feat: add celery task with mock processing and status polling`
+- 提交 Hash: `71ad1a4`
 - 分支: dev
 
 ---
@@ -190,4 +192,67 @@
 
 ### 提交信息
 - 提交说明: `feat: add download endpoint and error display`
+- 提交 Hash: `ebd3e9b`
 - 分支: dev
+
+---
+
+## 阶段4：开发日志与测试报告整理
+
+### 日期
+2026-07-04
+
+### 阶段目标
+整理之前各阶段的开发日志和测试报告，补充文档。
+
+### 关键代码修改（文件列表）
+- `docs/devlog.md` - 补充各阶段 commit hash，添加整体总结
+- `docs/test_report_stage0.md` - 阶段0测试报告（已有）
+- `docs/test_report_stage1.md` - 阶段1测试报告（已有）
+- `docs/test_report_stage2.md` - 阶段2测试报告（已有）
+- `docs/test_report_stage3.md` - 阶段3测试报告（已有）
+
+### 提交信息
+- 提交说明: `docs: add development logs and test reports`
+- 分支: dev
+
+---
+
+## 整体总结
+
+### 项目概述
+成功搭建了「技术服务网站最小原型」，验证了从图片+文本输入到 3D 模型生成、仿真计算、结果下载的核心流程。
+
+### 技术栈
+- **后端**: Python 3.10+ / FastAPI / SQLAlchemy / SQLite / Celery / Redis
+- **包管理**: uv（pyproject.toml + uv.lock）
+- **前端**: Vite / React 18 / TypeScript / axios
+- **测试**: pytest / TestClient
+
+### 各阶段提交记录
+| 阶段 | Commit Hash | 说明 |
+|------|------------|------|
+| 阶段0 | 3975e83 | 项目骨架与健康检查 |
+| 阶段1 | 3051137 | 任务创建与数据库集成 |
+| 阶段2 | 71ad1a4 | Celery 异步任务与状态轮询 |
+| 阶段3 | ebd3e9b | 结果下载与错误处理 |
+| 阶段4 | (本次提交) | 文档整理 |
+
+### 测试统计
+- 共 15 个单元测试，全部通过
+- 前端 TypeScript 类型检查全部通过
+
+### API 端点清单
+| 方法 | 路径 | 功能 |
+|------|------|------|
+| GET | /api/health | 健康检查 |
+| POST | /api/tasks | 创建任务（上传图片+文本） |
+| GET | /api/tasks/{task_id} | 查询任务状态 |
+| GET | /api/tasks/{task_id}/download | 下载结果文件 |
+
+### 核心流程
+1. 用户上传图片和文本描述
+2. 后端保存文件，创建数据库记录，触发 Celery 异步任务
+3. Celery 任务模拟：解析需求(10%) → 生成3D模型(40%) → 仿真计算(70%) → 完成(100%)
+4. 前端每2秒轮询任务状态，展示进度条
+5. 任务完成后显示下载按钮，失败时显示错误信息
