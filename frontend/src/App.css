@@ -1,7 +1,7 @@
 /**
  * 应用主样式
  *
- * 包含页面布局、健康检查区域等样式定义。
+ * 包含页面布局、健康检查区域、任务表单等样式定义。
  */
 
 .app-container {
@@ -23,20 +23,28 @@
   margin-bottom: 48px;
 }
 
-.health-section {
+/* 通用区块样式 */
+.health-section,
+.task-section {
   background: var(--social-bg);
   border-radius: 12px;
   padding: 32px;
+  margin-bottom: 32px;
   box-shadow: var(--shadow);
+  text-align: left;
 }
 
-.health-section h2 {
+.health-section h2,
+.task-section h2 {
   font-size: 1.5rem;
   margin-bottom: 24px;
   color: var(--text-h);
+  text-align: center;
 }
 
-.health-button {
+/* 按钮样式 */
+.health-button,
+.submit-button {
   font-size: 16px;
   padding: 12px 32px;
   border-radius: 8px;
@@ -48,19 +56,91 @@
   font-weight: 500;
 }
 
-.health-button:hover:not(:disabled) {
+.health-button:hover:not(:disabled),
+.submit-button:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.health-button:active:not(:disabled) {
+.health-button:active:not(:disabled),
+.submit-button:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-.health-button:disabled {
+.health-button:disabled,
+.submit-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+.reset-button {
+  font-size: 16px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: var(--text-h);
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: opacity 0.3s;
+  font-weight: 500;
+}
+
+.reset-button:hover {
+  opacity: 0.7;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.file-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.file-name {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.text-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* 状态消息 */
 .status-message {
   margin-top: 24px;
   padding: 16px;
